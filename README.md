@@ -18,7 +18,7 @@ npm run dev
 npm run build
 ```
 
--   Modeifed the `welcome` view, with just a message to test that it's working
+-   Modified the `welcome` view, with just a message to test that it's working
 
 ## Creating the setup
 
