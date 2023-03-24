@@ -2,6 +2,9 @@ version: "3.7"
 services:
     php:
         image: serversideup/php:8.1-fpm-nginx
+        container_name: php
+        hostname: laravel_php
+        restart: unless-stopped
         volumes:
             - .:/var/www/html/
         environment:
@@ -10,7 +13,11 @@ services:
             - 80:80
             - 443:443
         depends_on:
-            - "mariadb"
+            - mariadb
+            - meilisearch
+            - redis
+            - mailpit
+            - selenium
         networks:
             - laravel-app_default
 
@@ -33,32 +40,17 @@ services:
 
     meilisearch:
         image: getmeili/meilisearch:v0.27.2
-        networks:
-            - laravel-app_default
-        hostname: "laravel-docker_meilisearch"
+        container_name: meilisearch
+        hostname: laravel_meilisearch
+        restart: unless-stopped
         environment:
             MEILI_NO_ANALYTICS: "true"
         volumes:
             - ./docker/meilisearch/meilisearch_data:/meili_data:cached
-        depends_on:
-            - "mariadb"
-            - "php"
-
-    # nginx:
-    #     image: nginx:1.23.3
-    #     container_name: nginx
-    #     hostname: "laravel_nginx"
-    #     restart: unless-stopped
-    #     ports:
-    #         - 8180:80
-    #         - 8143:443
-    #     volumes:
-    #         - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
-    #         - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
-    #     depends_on:
-    #         - php
-    #     networks:
-    #         - laravel-app_default
+        ports:
+            - 7700:7700
+        networks:
+            - laravel-app_default
 
     redis:
         image: redis:6
@@ -67,10 +59,38 @@ services:
         restart: unless-stopped
         volumes:
             - ./docker/redis/data:/data:cached
-        depends_on:
-            - "mariadb"
-            - "php"
-        command: "redis-server --appendonly yes --requirepass redispassword"
+        ports:
+            - 6379:6379
+        healthcheck:
+            test:
+                - CMD
+                - redis-cli
+                - ping
+            retries: 3
+            timeout: 5s
+        networks:
+            - laravel-app_default
+
+    mailpit:
+        image: "axllent/mailpit:latest"
+        container_name: mailpit
+        hostname: "laravel_mailpit"
+        restart: unless-stopped
+        ports:
+            - 1025:1025
+            - 8025:8025
+        networks:
+            - laravel-app_default
+
+    selenium:
+        image: seleniarm/standalone-chromium
+        container_name: selenium
+        hostname: "laravel_selenium"
+        restart: unless-stopped
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        volumes:
+            - "/dev/shm:/dev/shm"
         networks:
             - laravel-app_default
 
